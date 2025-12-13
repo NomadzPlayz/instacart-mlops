@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
-import mlflow
-import mlflow.sklearn
+from joblib import load
 
-st.set_page_config(page_title="Instacart Reorder Predictor", layout="centered")
+st.set_page_config(
+    page_title="Instacart Reorder Predictor",
+    layout="centered"
+)
 
 st.title("🛒 Instacart Reorder Prediction")
 st.write(
@@ -11,22 +13,11 @@ st.write(
 )
 
 # ================================
-# LOAD MODEL FROM MLFLOW
+# LOAD MODEL (STATIC FILE)
 # ================================
 @st.cache_resource
 def load_model():
-    client = mlflow.tracking.MlflowClient()
-    experiment = client.get_experiment_by_name("Default")
-    runs = client.search_runs(
-        experiment_ids=[experiment.experiment_id],
-        order_by=["start_time DESC"],
-        max_results=1,
-    )
-
-    run_id = runs[0].info.run_id
-    model_uri = f"runs:/{run_id}/model"
-    model = mlflow.sklearn.load_model(model_uri)
-    return model
+    return load("models/logreg.joblib")
 
 model = load_model()
 
@@ -60,13 +51,11 @@ product_orders = st.number_input(
 # PREDICTION
 # ================================
 if st.button("Predict Reorder Probability"):
-    X = pd.DataFrame(
-        [{
-            "user_orders": user_orders,
-            "avg_days_between": avg_days_between,
-            "product_orders": product_orders,
-        }]
-    )
+    X = pd.DataFrame([{
+        "user_orders": user_orders,
+        "avg_days_between": avg_days_between,
+        "product_orders": product_orders,
+    }])
 
     prob = model.predict_proba(X)[0][1]
 
